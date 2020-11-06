@@ -1,6 +1,5 @@
 package tambola;
 
-
 import java.awt.Color;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
@@ -14,7 +13,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
-/******* THIS CLASS ENCAPSULATE DEALER'S LOGIC *********/
+
 class Dealer implements Runnable {
 	
 	private GameData gameData; //shared data 
@@ -33,10 +32,14 @@ class Dealer implements Runnable {
 	public void run() {
 		
 		/* STEP-1: write code to take a lock on gameData using lock1*/ 
-		synchronized(gameData.lock1){
-			// dealer executes until either (or both) players declare success 
-			/* STEP-2: specify condition for player1 and specify condition for player2 */ 
-			while(gameData.playerSuccessFlag[0]==false && gameData.playerSuccessFlag[1]==false && gameData.gameCompleteFlag==false) {
+		// 2 MARKS
+		synchronized(gameData.lock1) {			
+			
+			/* STEP-2: specify condition for player1 and specify condition for player2 */
+			// dealer executes until either (or both) players sets their playerSuccessFlag 
+			// 4 MARKS
+			while (!gameData.playerSuccessFlag[0] && !gameData.playerSuccessFlag[1]) {
+				
 				// set number announced flag to false before announcing the number
 				gameData.noAnnouncedFlag = false;
 				
@@ -50,74 +53,74 @@ class Dealer implements Runnable {
 				 * HINT: until the number is not announced the variable numberAnnounced 
 				 * remains 0 (zero)
 				 */
-				synchronized(gameData.lock2) {
-					
-					while(numberAnnounced == 0) {
+				// wait while no number has been pressed by the user on the GUI 
+				// 3 MARKS
+				synchronized(gameData.lock2){			
+					while(0 == numberAnnounced){
 						try {
 							gameData.lock2.wait();
 						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
-					}
-					
-					
-				}
-				gameData.announcedNumber = numberAnnounced;
-				numberAnnounced = 0;
-				
-				gameData.noAnnouncedFlag = true;
-				gameData.playerChanceFlag[0]=true;
-				gameData.playerChanceFlag[1]=true;
-				gameData.lock1.notifyAll();
-				
-				while(gameData.playerChanceFlag[0]==false || gameData.playerChanceFlag[1]==false) {
-					try {
-						gameData.lock1.wait();
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
 					}
 				}
 				
 				// STEP-4: initialize the announcedNumber in GameStat with the 
 				// number pressed on GameGUI for the players to read
-				
+				// 1 MARKS
+				gameData.announcedNumber = numberAnnounced;
+
 				// STEP-5: reset the announced number
-				  
+				// reset the announced number
+				// 1 MARKS
+				numberAnnounced = 0;  
+				
 				// STEP-6: communicate to the players that the number is announced
 				// using one of the variables in GameData 
-								
+				// set number announced to true on GameData for waiting players
+				// 1 MARKS
+				gameData.noAnnouncedFlag = true;
+				
 				// STEP-7: notify all the players waiting for the number to be announced 
 				// by the dealer using lock1 of GameData
-								
+				// Notify all the players waiting for the number to be announced by the dealer
+				// 1 MARKS
+				gameData.lock1.notifyAll();
+				
 				// STEP-8: wait using lock1 of GameData while the players haven't checked 
 				// the numbers 								
+				// wait while the players haven't checked the numbers
+				// 6 MARKS
+				while(!gameData.playerChanceFlag[0] || !gameData.playerChanceFlag[1]) {
+					try {
+						//Dealer is waiting for both the players to finish searching the 
+						//announced number
+						gameData.lock1.wait(); 
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}				
 			}
 			
-			// Check if Player1 has won
-			/* STEP-9: specify condition */ 
-			if(gameData.playerSuccessFlag[0]==true && gameData.playerSuccessFlag[1]==false){ 
-				// UNCOMMENT THE ONE LINE OF CODE WRITTEN BELOW AFTER SPECIFYING THE CONDITION
-								lblGameStatus.setText("PLAYER-1 HAS WON");				
+			
+			// STEP-9: Specify Condition to Check if Player1 has won
+			// 2 MARKS
+			if(gameData.playerSuccessFlag[0] && !gameData.playerSuccessFlag[1]) { 
+				lblGameStatus.setText("PLAYER-1 HAS WON");				
 			} 
-			// Check if Player2 has won
-			/* STEP-10: specify condition */ 
-			if(gameData.playerSuccessFlag[1]==true && gameData.playerSuccessFlag[0]==false){ 
-				// UNCOMMENT THE ONE LINE OF CODE WRITTEN BELOW AFTER SPECIFYING THE CONDITION
+			// STEP-10: Specify Condition to Check if Player1 has won
+			// 2 MARKS
+			else if(gameData.playerSuccessFlag[1] && !gameData.playerSuccessFlag[0]){ 
 				lblGameStatus.setText("PLAYER-2 HAS WON");				
 			} 
-			// Check if both Player1 and Player2 have won
-			/* STEP-11: specify condition */ 
-			if(gameData.playerSuccessFlag[1]==true && gameData.playerSuccessFlag[0]==false){
-				// UNCOMMENT THE ONE LINE OF CODE WRITTEN BELOW AFTER SPECIFYING THE CONDITION
+			// STEP-11: Specify Condition to Check if Player1 has won
+			// 2 MARKS
+			else if(gameData.playerSuccessFlag[0] && gameData.playerSuccessFlag[1]) {
 				lblGameStatus.setText("BOTH PLAYER-1 AND PLAYER-2 HAVE WON");				
 			}
-			
-			/* UNCOMMENT THE FOLLOWING TWO LINES OF CODE ONCE YOU FINISH WRITTING 
-			 * CODE FOR ALL STEPS ABOVE 
-			 */
+
 			gameData.gameCompleteFlag = true; // Set the complete flag to true 
+			
 			gameData.lock1.notifyAll(); // If at all any player is waiting			
 		}		
 	}
@@ -127,11 +130,10 @@ class Dealer implements Runnable {
 	}
 }
 
-/******* THIS CLASS ENCAPSULATE PLAYER'S LOGIC *********/
 class Player implements Runnable {
 
-	private int id;					// player id [0 or 1]
-	private GameData gameData;			// shared object
+	private int id;							// player id [0 or 1]
+	private GameData gameData;				// shared object
 	private JPanel playerTicketPanel;		// GUI component
 	private JButton[] btnOnTicket;			// buttons on player ticket
 	private int totalNumbersFound;    		// total numbers found
@@ -140,7 +142,7 @@ class Player implements Runnable {
 	// stores the numbers on the player ticket
 	private int[] ticket = new int[MAXNO];
 			
-	/****************** DO NOT MODIFY *****************/
+	/************************************ DO NOT MODIFY *********************************/
 	public Player(GameData gameData, int id) { 
 		
 		this.id = id; 		
@@ -168,57 +170,66 @@ class Player implements Runnable {
 		}
 	}
 	
-	/******************** DO NOT MODIFY **********************/
+	/************************************ DO NOT MODIFY *********************************/
 	private static int randInt(int min, int max) {	//method to generate random numbers
 	    Random rand = new Random();
 	    int randomNum = rand.nextInt((max - min) + 1) + min;
 	    return randomNum;
 	}
 	
-	/************* WRITE CODE FOR THIS METHOD ****************/
+	/************************************ WRITE CODE FOR THIS METHOD ********************/
 	public void run() {
 		/* STEP-12: write code to take a lock on gameData using lock1 */ 
-		synchronized(gameData.lock1){			
+		// take a lock on the instance of SharedData using lock1
+		// 2 MARKS
+		synchronized(gameData.lock1) {			
+			
+			/* STEP-13: Specify condition */
 			// both players execute while the game is not complete
-			/* STEP-13: Specify condition */ 
-			System.out.println("Running on " + Thread.currentThread().getName());
-			while(gameData.gameCompleteFlag==false){
+			// 2 MARKS
+			while(!gameData.gameCompleteFlag) {
 			
 				// STEP-14: both players should wait using lock1 of GameData until a number 
 				// is announced by the dealer or its not the chance of the player  
-								
-				// Its important to check this condition again because it is possible that
-				// one player may have found all the numbers when the other was waiting
-				while(gameData.playerChanceFlag[id]==false || gameData.announcedNumber==0) {
+				// 8 MARKS				  
+				while(!gameData.noAnnouncedFlag || gameData.playerChanceFlag[id]) {
 					try {
 						gameData.lock1.wait();
 					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				}
+				
+				// its important to check this condition again because it is possible that
+				// one player may have found all the numbers when the other was waiting
 				if(!gameData.gameCompleteFlag) {					
 					
 					// STEP-15: Check if the announced number is on the player's ticket
 					// if the number is found, the player increments the totalNumbersFound
 					// and set the back ground color of the button to GREEN using the following statement
-					for(int i=0;i<MAXNO;i++) {
-						if(ticket[i]==gameData.announcedNumber) {
-							totalNumbersFound++;
+					// this.btnOnTicket[i].setBackground(Color.GREEN)
+					// 7 MARKS					
+					for(int i = 0; i < MAXNO; i++) {						
+						if(gameData.announcedNumber == ticket[i]) {
+							this.totalNumbersFound++;							
 							this.btnOnTicket[i].setBackground(Color.GREEN);
+							break;
 						}
 					}
 					
-										
 					// STEP-16: player checks if it has won the game i.e., it has found all numbers
 					// then it should report success
-					if(totalNumbersFound==MAXNO) {
-						gameData.playerSuccessFlag[id] = true;
+					// 4 MARKS
+					if(this.totalNumbersFound == MAXNO) {
+						// player set the success flag 
+						gameData.playerSuccessFlag[this.id] = true;						
 					}
+					
 					// player sets its chance flag 
 					gameData.playerChanceFlag[id] = true;
 					
-					// STEP-17: notify all others waiting on lock1 of GameData		
+					// STEP-17: notify all others waiting on lock1 of GameData
+					// 2 MARKS
 					gameData.lock1.notifyAll();
 				}
 			}
@@ -230,9 +241,6 @@ class Player implements Runnable {
 	}
 }
 
-/**** THE INSTANCE OF THIS CLASS IS USED AS A MEANS OF COMMUNICATION *
- * AND SYNCHRONIZTION BETWEEN THE PLAYER AND DEALER THREADS ********** 
- * DONOT MODIFY THE CODE ****/
 class GameData {
 	public int announcedNumber = 0;	 
 	public boolean gameCompleteFlag = false;	
@@ -244,7 +252,6 @@ class GameData {
 	public Object lock2 = new Object();
 }
 
-/**** THIS CLASS ENCAPSULATES THE GUI OF THE APPLICATION - DONOT MODIFY THE CODE ****/
 class GameGUI implements ActionListener{
 	
 	private Dealer dealer;
@@ -313,7 +320,7 @@ class GameGUI implements ActionListener{
 }
 
 /**** THIS CLASS HAS THE main() METHOD - DONOT MODIFY THE CODE ****/
-class GameApp {
+class Game {
 
 	public static void main(String[] args) {
 		
